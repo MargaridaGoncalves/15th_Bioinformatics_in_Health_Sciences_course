@@ -1,0 +1,110 @@
+---
+title: "Open files in R studio"
+output: html_notebook
+---
+
+```{r}
+# Clear variables
+rm(list=ls())
+# Get path
+path<-getwd(); path # wd means work directory 
+# Set path
+setwd(path)
+```
+
+
+```{r}
+install.packages("readr")
+install.packages("readxl")
+install.packages("utils")
+```
+
+
+```{r}
+library(readr)
+library(readxl)
+library(utils)
+```
+
+
+# Open the xlsx file like:
+```{r}
+Example_xlsx_Data <- read_excel("Example_xlsx_Data.xlsx")
+
+Example_xlsx_Data
+```
+
+
+or
+
+...
+
+```{r}
+Data <- read_excel("Example_xlsx_Data.xlsx", 
+    sheet = "Sheet1")
+
+Data
+```
+
+
+
+# Open the csv file like:
+
+The csv files are sensible, do not alter them before opening in the R.
+```{r}
+Data <- read.csv("Example_csv_Data.csv")
+Data
+```
+or
+
+... I will show you how to call the file in the R studio
+```{r}
+Example_csv_Data <- read_csv("Example_csv_Data.csv")
+
+Example_csv_Data
+```
+
+
+# Open the txt file like:
+```{r}
+Data <- read.delim("Example_txt_Data.txt")
+Data
+```
+
+
+or
+
+... I will show you how to call the file in the R studio
+
+
+
+
+LASTLY, how to save the data as a RData (R workspace) and how to open afterwards:
+
+# Save as RData
+```{r}
+save(Data, file = "Data.RData") # the data will be saved in the paste 
+```
+
+
+# Open the Rdata
+```{r}
+# In the document to call this file you just need to code:
+load('Data.RData')
+```
+
+or
+
+... I will show you how to call the file in the R studio
+
+
+see the data:
+```{r}
+Data
+```
+
+
+
+
+
+

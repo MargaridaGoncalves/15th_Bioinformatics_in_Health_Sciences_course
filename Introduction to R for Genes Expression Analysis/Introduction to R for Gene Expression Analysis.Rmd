@@ -1,0 +1,712 @@
+---
+title: "Introduction to R for Gene Expression Analysis"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+First, let's inform the R studio where it can find the files that we will be working on:
+
+```{r}
+# Clear variables
+rm(list=ls())
+# Get path
+path<-getwd(); path # wd means work directory 
+# Set path
+setwd(path)
+```
+
+
+Welcome to the 15th Bioinformatics in Health Sciences course!
+
+Introduction to R for Gene Expression Analysis
+07/02/2024
+
+
+
+This is a R Notebook! Not a R scipt
+
+
+To proceed to a  we need the following packages!
+
+Insert the following lines in the console! (line 36 to 58)
+
+if (!require("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+
+BiocManager::install("clusterProfiler")
+BiocManager::install("enrichplot")
+
+BiocManager::install("DESeq2")
+# BiocManager::install("org.Hs.eg.db")
+# BiocManager::install("org.Mm.eg.db")
+BiocManager::install("AnnotationDbi")
+
+install.packages("gprofiler2")
+
+BiocManager::install("clustifyr")
+BiocManager::install("Biobase")
+BiocManager::install("GOSemSim")
+BiocManager::install("vidger")
+BiocManager::install("DEGreport")
+BiocManager::install("preprocessCore")
+
+install.packages("R.utils")
+install.packages("readxl")
+
+
+
+Now that we have our libraries, let's call them.
+
+Open all the necessary libraries:
+```{r}
+library(BiocGenerics)
+library(DESeq2)
+library(BiocManager)
+library(readxl)
+library(ggplot2)
+library(gprofiler2)
+library(clustifyr)
+library(org.Hs.eg.db)
+library(org.Mm.eg.db)
+library(clusterProfiler)
+library(AnnotationDbi)
+library(dplyr)
+library(preprocessCore)
+library(DEGreport)
+library(enrichplot)
+library(GOSemSim)
+library(vidger)
+library(R.utils)
+library(Biobase)
+```
+
+
+# Exploring the Count Matrix
+
+What are we expecting?
+How does a count matrix looks like? (detailed in the ppw)
+
+
+
+
+It's Time to Work on Our Genes!
+
+Let's get a count matrix from an RNA sequencing experiment from the National Center for Biotechnology Information repository!
+
+The dataset was retrieved from: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE232750
+
+
+Several datasets are comprised like counts.csv.gz in the repository. So, in these cases:
+
+1.    First we must decompress the file with the following command (In this file the count matrix is already decompressed)
+
+#```{r}
+#gunzip('GSE232750_ssbp3_counts.csv.gz')
+#```
+
+2.    Then, we want to open the file in hand
+
+```{r}
+read.csv("GSE232750_ssbp3_counts.csv")
+```
+
+
+We now have the data! What should we do next?
+
+
+» Look at our data
+
+» Remove genes that do not have information
+
+» Look at the variables
+
+
+All the previous options are correct. We should do all of them.
+
+
+```{r}
+# save our data
+data.test <- read.csv("GSE232750_ssbp3_counts.csv")
+
+data.test
+```
+
+
+First thing we should always do is to convert the column that have our genes names to rownames! 
+
+For that we execute the following code:
+
+```{r}
+rownames(data.test) <- data.test$X
+data.test
+```
+
+Now we notice that we have a column that needs to be removed! 
+
+Let's do that with:
+```{r}
+data.test <- data.test[,-1]
+data.test
+```
+Perfect! We have completed the first step!
+
+We used a specific code line to identify the first column and then to delete it. 
+
+Let's further understand this.
+
+
+
+# How to look at specific rows?
+
+We can look at:
+
+1. »» The first 6 rows
+2. »» The last 6 rows
+3. »» Specific continuous rows
+4. »» Random rows
+5. »» A specific gene
+
+
+## The first 6 rows
+```{r}
+# option 1
+head(data.test)
+```
+
+
+## The last 6 rows
+```{r}
+# option 2
+tail(data.test)
+```
+
+
+## Specific continuous rows
+```{r}
+# option 3
+data.test[284:300,2:3]
+```
+
+
+## Random rows
+```{r}
+# option 4
+data.test[c(3,56,899,1353,6778,17,18),] # c() 
+# copy c(3,56,899,1353,6778) to the Rstudio console to visualize
+```
+
+## A specific gene
+```{r}
+# option 5
+data.test[c("ENSMUSG00000026430","ENSMUSG00000026430"),]
+```
+
+## How to look at specific columns?
+
+We can look at:
+
+1. »» One specific column
+2. »» Specific continuous columns
+3. »» Random columns
+4. »» Specific variable
+
+
+## One specific column
+```{r}
+# Option 1
+data.test[,1]
+data.frame(data.test[,1])
+```
+
+
+## Specific continuous columns
+```{r}
+# Option 2
+data.test[,1:3]
+```
+
+
+## Random columns
+```{r}
+# Option 3
+data.test[,c(1,4,6)]
+```
+
+
+## Specific variable
+```{r}
+# Option 4
+data.test$Ko1
+data.frame(data.test$Ko1)
+```
+
+
+# Let's learn other manipulations that migth be useful!
+
+1. »» Delete a specific row
+2. »» Delete more than 1 row
+3. »» Find missing values (NA)
+4. »» Delete specific genes that have NA
+5. »» Know how to change NA or other values for a specific number
+
+
+
+## Delete a specific row
+```{r}
+# option 1
+head(data.test[-2,-3]) # delete the second row
+```
+
+## Delete more than 1 row
+```{r}
+# Option 2
+head(data.test[-c(2,3,4,5),])
+
+#or
+head(data.test[-c(2:5),])
+```
+
+
+## Find missing values (NA)
+```{r}
+# Option 3
+
+Find_NA = data.test[!complete.cases(data.test), ]
+Find_NA
+
+#or
+
+data.test[is.na(data.test$Ko1), ]
+```
+
+
+Our data does not present missing values!
+
+Let's create a data.frame with NAs to see this code!
+
+### Create a data.frame by hand
+```{r}
+#create data frame
+df <- data.frame(points=c(4, NA, 10, 14, 15, NA, 20, 22),
+                 rebounds=c(NA, 3, 3, 7, 6, 8, 14, 10),
+                 assists=c(NA, 9, 4, 4, 3, 7, 10, 11))
+df
+```
+
+Now, we use the previous code:
+```{r}
+df[!complete.cases(df), ] # ! is equivalent to saying "it's not"
+
+df[is.na(df$points),] # we are looking for NA's in the variable points column
+```
+
+Let's use the df data for the rest of the examples.
+
+## Delete specific genes that have missing values
+```{r}
+# Option 4
+# Using the previous code line we save the df like:
+
+df <- df[complete.cases(df), ] # This allow us to save only the rows that have values in all of the samples
+df
+```
+
+
+## Know how to change NA or other values for a specific number
+```{r}
+# Option 5
+
+df[df == NA] <- 0
+df[df != 15] <- 0
+df
+```
+You can see that for now on the previous '10' are now '0'
+
+This is now the new df
+
+```{r}
+df
+```
+
+# Create a Metadata
+
+It will have the samples conditions information
+
+
+## It can be done by hand
+
+LIMITATION: We can forget or switch the order of the dataset conditions and replicates if we have an extensive dataset
+
+```{r}
+# Create a column data frame with multiple samples per condition
+colData <- data.frame(condition = factor(c("control", "control", "control", "knockout", "knockout","knockout")),
+                     row.names = paste("Sample", 1:6))
+
+colData
+```
+
+
+## Or we can use the information from the initial count matrix or an excel file from the experiment
+
+»»    It is a good practise to always create a new table through other tables that we have in hand
+
+
+
+Let's first create a Condition vector through the colnames of data.test
+
+»»    looking at our data, we want condition column that says control control control knockout knockout knockout
+
+
+
+```{r}
+Condition <- data.test # create a new data.frame that is equal to the data.test
+# good practise because it will prevent errors in our dataset
+
+colnames(Condition) <- gsub("Con1", "control", gsub("Con2", "control", colnames(Condition)))
+head(Condition)
+
+```
+
+We can notice that the column names are changing
+
+Now you Know how to change the names in a data.frame!
+
+Let's continue! Let's do it for the other ones.
+
+Can you spot where is the error?!
+```{r}
+colnames(Condition) <- gsub("Con3", "control", gsub("Ko1", "knockout",
+gsub("Ko2", "knockout", gsub(" Ko3", "knockout", colnames(Condition)))))
+
+head(Condition)
+```
+
+
+The space is also a character!
+```{r}
+colnames(Condition) <- gsub("Ko3", "knockout", colnames(Condition))
+
+head(Condition)
+```
+
+Now we can create a vector with our conditions information:
+```{r}
+information <- c(colnames(Condition))
+information
+```
+
+
+Let's finish our metadata data.frame
+
+```{r}
+colData <- data.frame(condition = factor(information),
+                     row.names = colnames(data.test))
+
+colData
+```
+The samples have to be in the same order as in the read counts table.
+The samples also need to have the same name in both tables!!
+
+
+
+We want in the end to say the knockout sample is 2 times more expressed than the control sample.
+Or the knockout sample is 1.5 times less expressed than the control sample.
+
+So, it is important to assure that the levels of the variable condition are "knockout" and "control"
+in order to have in the analysis: Knockout vs control and not control vs Knockout
+```{r}
+levels(colData$condition)
+
+# we need to confirm if our vector starts with our Knockout samples!!
+# it is important because we will always compare our results with the controls and not the other way around!
+
+
+# The levels will always be ordered alphabetically 
+# so let's relevel our variable
+
+colData$condition <- factor(colData$condition, levels = c("knockout", "control"))
+levels(colData$condition)
+```
+
+
+
+We are ready to start our analysis!
+
+# DESeq2
+
+Let's use the DEseq2 package!
+```{r}
+
+dds <- DESeqDataSetFromMatrix(countData = data.test,
+                              colData = colData,
+                              design= ~ condition)
+
+vec = c(rownames(data.test)) # This function normally deletes our rownames, so we force it to show them
+rownames(dds) <- vec
+
+dds
+```
+
+
+
+
+
+## Now we need to filter our data!
+
+»» Delete genes that have null or almost none counts across all of the samples
+
+Why ? 
+
+»» To reduce the False discovery rate
+
+Let's see how to do it in the chunk bellow:
+```{r}
+# let's see the head and tail of our data
+head(data.test)
+tail(data.test)
+
+```
+
+```{r}
+
+head(as.data.frame(rowSums(counts(dds) >= 500)))
+# here we are looking in how many columns a specific gene has more than 500 counts
+
+tail(as.data.frame(rowSums(counts(dds) >= 500)))
+
+
+```
+
+
+```{r}
+head(as.data.frame(rowSums(counts(dds) <= 10)))
+# here we are looking in how many columns a specific gene has less than 10 counts
+
+
+```
+
+```{r}
+min(table(colData$condition))
+# The output of this code will be the number of replicas of our data
+# It will be equal to 3!
+```
+
+So to filter our data, we will need to:
+```{r}
+Keep <- rowSums(counts(dds) >= 10) >= min(table(colData$condition))
+# In transcriptomics the condition >= 10 for at least the minimum number of replicas is accepted
+# and commonly used
+# but will always depend on your data
+
+dds <- dds[Keep,]
+
+head(dds)
+```
+## Time to see our DEseq2 data!!
+
+```{r}
+dds = DESeq(dds)
+```
+
+
+```{r}
+res <- results(dds, contrast =c("condition", "knockout", "control")) # You can also change the variable levels in here
+head(res)
+
+#res <- results(dds, contrast =c("condition", "control", "knockout")) # This analysis is also possible
+#head(res)
+
+#If we wanted to study other variables (taking into consideration our Metadata!) we could do for example:
+#res <- results(dds, contrast =c("Time", "6h", "24h"))
+#head(res)
+```
+
+Two important things to look:
+
+1. log2FoldChange
+2. padj
+
+
+## log2FoldChange
+
+For a given comparison, a positive fold change value indicates an increase of expression, while a negative fold change indicates a decrease in expression. This value is typically reported in logarithmic scale (base 2, that is, log2FoldChange).
+
+For example, log2 fold change of 1.5 for a specific gene in the “Placebo vs Insulin comparison” means that the expression of that gene is increased in Placebo relative to Insulin by a multiplicative factor of 2 ^ 1.5   ≈  2.82.
+
+To help, we have in our current dataset the fold change log2(Control/knockout).
+
+
+
+## padj
+
+
+Here, the p-value obtained for each gene above is re-calculated to correct for running many statistical tests (as many as the number of genes). In the result, we can say that all genes with adjusted p-value < 0.05 are significantly differentially expressed between these two conditions.
+
+
+## p-values set to NA
+
+
+Some values in the results table can be set to NA for one of the following reasons:
+
+If within a row, all samples have zero counts, the baseMean column will be zero, and the log2 fold change estimates, p-value and adjusted p-value will all be set to NA;
+
+If a row contains a sample with an extreme count outlier then the p-value and adjusted p-value will be set to NA.
+
+
+## Additionally:
+
+The Wald test for significance of GLM coefficients is provided as the default inference method. By default DESeq2 uses the Wald test to identify genes that are differentially expressed between two sample classes. 
+
+MLE: maximum likelihood estimation
+
+
+
+
+# It's time to find out how many genes are diferentially expressed!
+
+## First we find out how many have a pajd < 0.05
+```{r}
+sum(res$padj < 0.05, na.rm=TRUE)
+res # 2096 out of 56980
+```
+
+
+
+Then we combine the code from the chunk above with the following!
+
+## It is important to combine padj with log2FoldChange!
+```{r}
+resnew = as.data.frame(res)
+#Let's create a new data.frame to save the previous one
+# Once again a good practise
+
+filtering <- resnew %>% filter(resnew$padj < 0.05)
+
+filtering <- filtering %>% filter(abs(filtering$log2FoldChange) > 1)
+
+nrow(filtering) # see how many genes are diferentially expressed
+# we are asking how many rows exist in this new data.frame
+# result: 584 DE genes!
+
+head(filtering)
+tail(filtering)
+```
+
+## Let's see which genes are the most significant DE genes
+
+We will order our DE genes list!
+```{r}
+ordered = res[order(res$padj),]
+head(ordered)
+```
+
+We can also take a look at a specific gene!
+
+We learned this previously
+```{r}
+res["ENSMUSG00000110156",]
+```
+
+Let's observe the behaviour of the reads of each sample:
+
+To do that, we use the plotCounts
+```{r}
+plotCounts(dds, gene=which.min(res$padj), intgroup="condition")
+# This gene is DE!!
+# Let's see a gene that is not DE
+
+plotCounts(dds, gene=which.max(res$padj), intgroup="condition")
+
+# Another gene that is a non-DE
+
+plotCounts(dds, gene= "ENSMUSG00000095742", intgroup="condition")
+
+```
+
+
+## Let's confirm that our samples were retrieved correctly!
+
+We will use the PCA plot
+
+Samples with more resemblance will be closer to each other
+```{r}
+ntd <- normTransform(dds)
+plotPCA(ntd,intgroup="condition")
+```
+Not the best result! But we can divide the two groups with the first principal component (PC1)
+
+So, we can assume that our samples are ok.
+
+
+# Volcano Plot Time
+```{r}
+results = as.data.frame(res) # make sure that in here you put your dds result: res
+
+results <- results[complete.cases(results), ]
+
+results <-results %>% # here you can change the padj and log2fold criteria
+  mutate(point_color = case_when(
+    padj < 0.05 & log2FoldChange < -1 ~ "down", # significantly down
+    padj < 0.05 & log2FoldChange > 1 ~ "up", # significantly up
+    TRUE ~ "Not differentially expressed") # not significant
+  )
+
+# Color points
+v4 <- ggplot(data=results, aes(x=log2FoldChange, y=-log10(padj), col = point_color)) + geom_point() + theme_minimal()
+
+
+results$RefSeq <- rownames(results)
+
+results$point_color = as.factor(results$point_color)
+
+
+# Change colors
+v5 <- v4 + scale_color_manual(values = c("#5555ff", "lightgrey", "red3")) + theme(legend.position = "none") + geom_text(label=results$RefSeq,
+    nudge_x=0.85, nudge_y=0.2,
+    check_overlap=T)
+
+v5
+```
+
+# Gene Ontology enrichment
+
+
+```{r}
+
+genes_to_test <- rownames(filtering)
+genes_to_test
+
+#genes_to_test <- gsub("\\..*","",genes_to_test) # once again gsub is to substitute \\..* with nothing
+#genes_to_test
+
+Go_results <- enrichGO(gene = genes_to_test, OrgDb = "org.Mm.eg.db", keyType = "ENSEMBL", ont = "BP")
+
+as.data.frame(Go_results)
+
+fit <- plot(barplot(Go_results,showCategory = 20))
+fit
+
+goplot(Go_results)
+
+dotplot(Go_results)
+
+# You can also create an enrichment map that connects GO terms with edges between overlapping gene sets. This makes it easier to identify functional modules:
+
+ora_analysis_bp <- pairwise_termsim(Go_results, method = "JC")
+emapplot(ora_analysis_bp, color = "qvalue")
+```
+
+
+
+
+## Knit to PDF
+
+To Knit to a pdf first you need to run this line in the console:
+
+tinytex::install_tinytex()
+
+Then go to the preview button and select Knit to PDF

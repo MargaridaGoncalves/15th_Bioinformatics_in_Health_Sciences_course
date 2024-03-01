@@ -1,0 +1,280 @@
+---
+title: "R Visualization"
+output: html_notebook
+---
+
+
+```{r}
+# Clear variables
+rm(list=ls())
+# Get path
+path<-getwd(); path # wd means work directory 
+# Set path
+setwd(path)
+```
+
+
+## Part 1
+
+Let's call our RData:
+
+```{r}
+load("Data.RData")
+```
+
+```{r}
+Data
+```
+
+
+Some important packages/libraries for R visualization
+```{r}
+install.packages("ggplot2")
+install.packages("dplyr")
+install.packages("plotrix")
+
+```
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(plotrix)
+```
+
+
+# scatter plot
+```{r}
+ggplot(Data, aes(x = x, y = y)) +
+  geom_point() # geom_point infers that we want the data expressed as scatter plot
+```
+
+
+Let's change colors
+```{r}
+ggplot(Data, aes(x = x, y = y)) +
+  geom_point(color = "#547456") # geom_point infers that we want the data expressed as scatter plot
+```
+
+Let's do a zoom in between 0 and 5000
+```{r, fig.width=10}
+
+zoomInPlot(Data$x, Data$y,          # Data, we are calling specific variables of the data
+           pch = 10,                # Symbol                
+           zoomtitle = "Zoom plot", # Title
+           rxlim = c(100, 5000),
+           rylim = c(100, 2000))
+```
+
+
+# Box plot
+```{r}
+ggplot(Data, aes(y = y)) + 
+  geom_boxplot()
+```
+
+
+# Flip the Boxplot
+```{r}
+ggplot(Data, aes(y = y)) + 
+  geom_boxplot() +
+  coord_flip()
+```
+
+You can see that we add new conditions easily with just adding a  "+ function()"
+
+
+# Box plot plus scatter 
+```{r}
+ ggplot(Data, aes(x = x, y = y)) + # we needed to add x
+  geom_boxplot() +
+  coord_flip() +
+  geom_jitter() 
+```
+
+
+## Part 2
+
+LET'S LEARN HOW TO DO A VOLCANO PLOT!
+
+This type of plot is extensively used in the Gene expression analysis
+
+Here I call a data set with the results of an analysis
+
+```{r}
+load('res.RData')
+```
+
+```{r}
+res
+```
+
+What are we looking for?
+
+Two important things to look:
+
+1. log2FoldChange
+2. padj
+
+
+## log2FoldChange
+
+For a given comparison, a positive fold change value indicates an increase of expression, while a negative fold change indicates a decrease in expression. This value is typically reported in logarithmic scale (base 2, that is, log2FoldChange).
+
+For example, log2 fold change of 1.5 for a specific gene in the “Placebo vs Insulin comparison” means that the expression of that gene is increased in Placebo relative to Insulin by a multiplicative factor of 2^1.5   ≈  2.82.
+
+So, it is important to assure that the levels of the variable condition are "Insulin" and "Placebo"
+in order to have in the analysis: Insulin vs Placebo and not Placebo vs Insulin
+
+We want in the end to say the Insulin sample is 2 times more expressed than the Placebo sample.
+Or the Insulin sample is 1.5 times less expressed than the Placebo sample.
+
+
+## padj
+
+
+Here, the p-value obtained for each gene above is re-calculated to correct for running many statistical tests. In the result, we can say that all genes with adjusted p-value < 0.05 are significantly differentially expressed between these two conditions. 
+
+
+## p-values set to NA
+
+
+Some values in the results table can be set to NA for one of the following reasons:
+
+If within a row, all samples have zero counts, the baseMean column will be zero, and the log2 fold change estimates, p-value and adjusted p-value will all be set to NA;
+
+If a row contains a sample with an extreme count outlier then the p-value and adjusted p-value will be set to NA.
+
+
+
+First, we select the conditions of the plot
+```{r}
+res <- res[complete.cases(res), ]
+
+res <-res %>%
+  mutate(point_color = case_when(
+    padj < 0.05 & log2FoldChange < -1 ~ "down", # significantly down
+    padj < 0.05 & log2FoldChange > 1 ~ "up", # significantly up
+    TRUE ~ "Not differentially expressed") # not significant
+  )
+
+```
+
+
+```{r}
+ ggplot(data=res, aes(x=log2FoldChange, y= -log10(padj))) + # aes(): select the variables that we want to show
+  geom_point(size = 1) + # size of the points
+  theme_minimal() # simple background
+
+
+```
+
+We see that the y axis is not enough, let's correct it 
+# adjust y axis
+```{r}
+ggplot(data=res, aes(x=log2FoldChange, y= -log10(padj))) + # aes(): select the variables that we want to show
+  geom_point(size = 1) + # size of the points
+  theme_minimal() + 
+  ylim(c(0, 1500)) 
+```
+
+
+```{r}
+
+res$point_color = as.factor(res$point_color)
+
+# Color points
+v4 <- ggplot(data=res, aes(x=log2FoldChange, y=-log10(padj), col = point_color)) + # point color was previously defined with our log2FoldChange and padj conditions
+  geom_point() + 
+  theme_minimal()
+
+v4
+
+
+```
+
+Let's learn how to change colors
+# Plot colors
+```{r}
+ggplot(data=res, aes(x=log2FoldChange, y=-log10(padj), col = point_color)) + 
+  geom_point(size = 1) + 
+  theme_minimal() + 
+  scale_color_manual(values = c("#5555ff", "lightgrey", "#F4A460"))
+```
+
+Let's change the axis text sizes and colors:
+# axis
+```{r}
+ggplot(data=res, aes(x=log2FoldChange, y=-log10(padj), col = point_color)) + 
+  geom_point(size = 1) + 
+  theme_minimal() + 
+  scale_color_manual(values = c("#5555ff", "lightgrey", "#F4A460")) +
+ theme(axis.text.x = element_text(color = "#00008B",
+                                  size = 12),
+       axis.text.y = element_text(color = "#551A8B",
+                                  size = 12))
+```
+
+
+Let's change the axis text sizes and colors:
+# axis title
+
+```{r}
+ggplot(data=res, aes(x=log2FoldChange, y=-log10(padj), col = point_color)) + 
+  geom_point(size = 1) + 
+  theme_minimal() + 
+  scale_color_manual(values = c("#5555ff", "lightgrey", "#F4A460")) +
+  theme(axis.title.x = element_text(size = 15,
+                                   color = "#008B45",
+                                   face = "bold"),
+       axis.title.y = element_text(size = 10,
+                                   color = "#CD4F39",
+                                   face = "italic"))
+```
+We can also change the axis title:
+# Title
+```{r}
+ggplot(data=res, aes(x=log2FoldChange, y=-log10(padj), col = point_color)) + 
+  geom_point(size = 1) + 
+  theme_minimal() + 
+  scale_color_manual(values = c("#5555ff", "lightgrey", "#F4A460")) + 
+  xlab("X-axis title") +
+  ylab("Y-axis title")
+```
+
+# Add a Plot title
+```{r}
+ggplot(data=res, aes(x=log2FoldChange, y=-log10(padj), col = point_color)) + 
+  geom_point(size = 1) + 
+  theme_minimal() + 
+  scale_color_manual(values = c("#5555ff", "lightgrey", "#F4A460")) + 
+  ggtitle("Title of the plot using ggtitle()")
+```
+
+# Add/change the legend of the plot
+```{r}
+ggplot(data=res, aes(x=log2FoldChange, y=-log10(padj), col = point_color)) + 
+  geom_point(size = 1) + 
+  theme_minimal() + 
+  scale_color_manual(values = c("#5555ff", "lightgrey", "#F4A460")) +
+  theme(legend.title = element_text(colour="#00868B", size=10, face="bold"))+ 
+  guides(color = guide_legend(title = "New title"))
+```
+Now, let's identify the name of the genes that are DE
+
+First, it is necessary to create a vector with all the genes names:
+```{r}
+res$RefSeq <- rownames(res)
+```
+
+
+Then, we just need to put these names as our label
+```{r}
+# Change colors
+v5 <- v4 + scale_color_manual(values = c("#5555ff", "lightgrey", "red3")) + theme(legend.position = "none") + geom_text(label=res$RefSeq, # here we have the label
+    nudge_x=0.85, nudge_y=0.2, # nudge the labels to not be on top of the scatter
+    check_overlap=T)
+
+v5
+```
+
